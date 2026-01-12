@@ -114,7 +114,7 @@ jobs:
           COMPOSE_FILE: ${{ steps.env.outputs.COMPOSE_FILE }}
           COMPOSE_PROJECT: ${{ steps.env.outputs.COMPOSE_PROJECT }}
           BRANCH: ${{ github.ref_name }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           IMAGE_REPO: ${{ steps.repo.outputs.repository_lower }}
           # Stage secrets
