@@ -200,11 +200,10 @@ jobs:
             fi
 
             export GITHUB_REPOSITORY="$IMAGE_REPO"
-            export COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT
 
-            # Restart containers
-            docker compose -f $COMPOSE_FILE down --remove-orphans
-            docker compose -f $COMPOSE_FILE up -d --force-recreate
+            # Restart containers with explicit project name
+            COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT docker compose -f $COMPOSE_FILE down --remove-orphans
+            COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT docker compose -f $COMPOSE_FILE up -d --force-recreate
 
             # Cleanup old images (keep only current branch image)
             echo "Cleaning up old Docker images..."
