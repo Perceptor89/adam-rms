@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY}:stage
+    container_name: adam-rms-stage
+    restart: unless-stopped
+    environment:
+      - DB_HOSTNAME=${DB_HOSTNAME}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PORT=${DB_PORT:-3306}
+      - DEV_MODE=${DEV_MODE:-false}
+      - CONFIG_ROOTURL=${CONFIG_ROOTURL}
+      - CONFIG_AWS_S3_KEY=${CONFIG_AWS_S3_KEY}
+      - CONFIG_AWS_S3_SECRET=${CONFIG_AWS_S3_SECRET}
+      - CONFIG_AWS_S3_BUCKET=${CONFIG_AWS_S3_BUCKET}
+      - CONFIG_AWS_S3_BROWSER_ENDPOINT=${CONFIG_AWS_S3_BROWSER_ENDPOINT}
+      - CONFIG_AWS_S3_SERVER_ENDPOINT=${CONFIG_AWS_S3_SERVER_ENDPOINT}
+      - CONFIG_AWS_S3_ENDPOINT_PATHSTYLE=${CONFIG_AWS_S3_ENDPOINT_PATHSTYLE:-Enabled}
+      - CONFIG_AWS_S3_REGION=${CONFIG_AWS_S3_REGION}
+    networks:
+      - infra_zomro_default
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"  
+
+networks:
+  infra_zomro_default:
+    external: true

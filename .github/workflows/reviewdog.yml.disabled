@@ -2,6 +2,7 @@ name: Reviewdog
 on: [pull_request]
 jobs:
   spelling:
+    if: github.repository == 'adam-rms/adam-rms'
     name: Spelling Check
     runs-on: ubuntu-latest
     steps:
@@ -14,6 +15,7 @@ jobs:
           ignore: "color,colour,colors,colours,centre,center"
           level: warning
   alex:
+    if: github.repository == 'adam-rms/adam-rms'
     name: Alex Language Review
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,192 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches:
+      - stage
+      - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        if: ${{ env.SSH_PRIVATE_KEY != '' }}
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ env.SSH_PRIVATE_KEY }}
+
+      - name: Set environment variables
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "stage" ]; then
+            echo "COMPOSE_FILE=docker-compose.stage.yml" >> $GITHUB_OUTPUT
+            echo "COMPOSE_PROJECT=adam-rms-stage" >> $GITHUB_OUTPUT
+          else
+            echo "COMPOSE_FILE=docker-compose.prod.yml" >> $GITHUB_OUTPUT
+            echo "COMPOSE_PROJECT=adam-rms-prod" >> $GITHUB_OUTPUT
+          fi
+          echo "DEPLOY_PATH=${{ secrets.DEPLOY_PATH }}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to server
+        if: ${{ env.SSH_PRIVATE_KEY != '' }}
+        env:
+          DEPLOY_PATH: ${{ steps.env.outputs.DEPLOY_PATH }}
+          COMPOSE_FILE: ${{ steps.env.outputs.COMPOSE_FILE }}
+          COMPOSE_PROJECT: ${{ steps.env.outputs.COMPOSE_PROJECT }}
+          BRANCH: ${{ github.ref_name }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          # Stage secrets
+          STAGE_DB_HOSTNAME: ${{ secrets.STAGE_DB_HOSTNAME }}
+          STAGE_DB_DATABASE: ${{ secrets.STAGE_DB_DATABASE }}
+          STAGE_DB_USERNAME: ${{ secrets.STAGE_DB_USERNAME }}
+          STAGE_DB_PASSWORD: ${{ secrets.STAGE_DB_PASSWORD }}
+          STAGE_DB_PORT: ${{ secrets.STAGE_DB_PORT }}
+          STAGE_DEV_MODE: ${{ secrets.STAGE_DEV_MODE }}
+          STAGE_CONFIG_ROOTURL: ${{ secrets.STAGE_CONFIG_ROOTURL }}
+          STAGE_CONFIG_AWS_S3_KEY: ${{ secrets.STAGE_CONFIG_AWS_S3_KEY }}
+          STAGE_CONFIG_AWS_S3_SECRET: ${{ secrets.STAGE_CONFIG_AWS_S3_SECRET }}
+          STAGE_CONFIG_AWS_S3_BUCKET: ${{ secrets.STAGE_CONFIG_AWS_S3_BUCKET }}
+          STAGE_CONFIG_AWS_S3_BROWSER_ENDPOINT: ${{ secrets.STAGE_CONFIG_AWS_S3_BROWSER_ENDPOINT }}
+          STAGE_CONFIG_AWS_S3_SERVER_ENDPOINT: ${{ secrets.STAGE_CONFIG_AWS_S3_SERVER_ENDPOINT }}
+          STAGE_CONFIG_AWS_S3_ENDPOINT_PATHSTYLE: ${{ secrets.STAGE_CONFIG_AWS_S3_ENDPOINT_PATHSTYLE }}
+          STAGE_CONFIG_AWS_S3_REGION: ${{ secrets.STAGE_CONFIG_AWS_S3_REGION }}
+          # Production secrets
+          PROD_DB_HOSTNAME: ${{ secrets.PROD_DB_HOSTNAME }}
+          PROD_DB_DATABASE: ${{ secrets.PROD_DB_DATABASE }}
+          PROD_DB_USERNAME: ${{ secrets.PROD_DB_USERNAME }}
+          PROD_DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+          PROD_DB_PORT: ${{ secrets.PROD_DB_PORT }}
+          PROD_DEV_MODE: ${{ secrets.PROD_DEV_MODE }}
+          PROD_CONFIG_ROOTURL: ${{ secrets.PROD_CONFIG_ROOTURL }}
+          PROD_CONFIG_AWS_S3_KEY: ${{ secrets.PROD_CONFIG_AWS_S3_KEY }}
+          PROD_CONFIG_AWS_S3_SECRET: ${{ secrets.PROD_CONFIG_AWS_S3_SECRET }}
+          PROD_CONFIG_AWS_S3_BUCKET: ${{ secrets.PROD_CONFIG_AWS_S3_BUCKET }}
+          PROD_CONFIG_AWS_S3_BROWSER_ENDPOINT: ${{ secrets.PROD_CONFIG_AWS_S3_BROWSER_ENDPOINT }}
+          PROD_CONFIG_AWS_S3_SERVER_ENDPOINT: ${{ secrets.PROD_CONFIG_AWS_S3_SERVER_ENDPOINT }}
+          PROD_CONFIG_AWS_S3_ENDPOINT_PATHSTYLE: ${{ secrets.PROD_CONFIG_AWS_S3_ENDPOINT_PATHSTYLE }}
+          PROD_CONFIG_AWS_S3_REGION: ${{ secrets.PROD_CONFIG_AWS_S3_REGION }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+            cd $DEPLOY_PATH
+
+            # Pull latest changes
+            git pull origin $BRANCH
+
+            # Login to GHCR
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+            # Pull latest image
+            docker pull ghcr.io/$GITHUB_REPOSITORY:$BRANCH
+
+            # Export environment variables based on branch
+            if [ "$BRANCH" = "stage" ]; then
+              export DB_HOSTNAME="$STAGE_DB_HOSTNAME"
+              export DB_DATABASE="$STAGE_DB_DATABASE"
+              export DB_USERNAME="$STAGE_DB_USERNAME"
+              export DB_PASSWORD="$STAGE_DB_PASSWORD"
+              export DB_PORT="$STAGE_DB_PORT"
+              export DEV_MODE="$STAGE_DEV_MODE"
+              export CONFIG_ROOTURL="$STAGE_CONFIG_ROOTURL"
+              export CONFIG_AWS_S3_KEY="$STAGE_CONFIG_AWS_S3_KEY"
+              export CONFIG_AWS_S3_SECRET="$STAGE_CONFIG_AWS_S3_SECRET"
+              export CONFIG_AWS_S3_BUCKET="$STAGE_CONFIG_AWS_S3_BUCKET"
+              export CONFIG_AWS_S3_BROWSER_ENDPOINT="$STAGE_CONFIG_AWS_S3_BROWSER_ENDPOINT"
+              export CONFIG_AWS_S3_SERVER_ENDPOINT="$STAGE_CONFIG_AWS_S3_SERVER_ENDPOINT"
+              export CONFIG_AWS_S3_ENDPOINT_PATHSTYLE="$STAGE_CONFIG_AWS_S3_ENDPOINT_PATHSTYLE"
+              export CONFIG_AWS_S3_REGION="$STAGE_CONFIG_AWS_S3_REGION"
+            else
+              export DB_HOSTNAME="$PROD_DB_HOSTNAME"
+              export DB_DATABASE="$PROD_DB_DATABASE"
+              export DB_USERNAME="$PROD_DB_USERNAME"
+              export DB_PASSWORD="$PROD_DB_PASSWORD"
+              export DB_PORT="$PROD_DB_PORT"
+              export DEV_MODE="$PROD_DEV_MODE"
+              export CONFIG_ROOTURL="$PROD_CONFIG_ROOTURL"
+              export CONFIG_AWS_S3_KEY="$PROD_CONFIG_AWS_S3_KEY"
+              export CONFIG_AWS_S3_SECRET="$PROD_CONFIG_AWS_S3_SECRET"
+              export CONFIG_AWS_S3_BUCKET="$PROD_CONFIG_AWS_S3_BUCKET"
+              export CONFIG_AWS_S3_BROWSER_ENDPOINT="$PROD_CONFIG_AWS_S3_BROWSER_ENDPOINT"
+              export CONFIG_AWS_S3_SERVER_ENDPOINT="$PROD_CONFIG_AWS_S3_SERVER_ENDPOINT"
+              export CONFIG_AWS_S3_ENDPOINT_PATHSTYLE="$PROD_CONFIG_AWS_S3_ENDPOINT_PATHSTYLE"
+              export CONFIG_AWS_S3_REGION="$PROD_CONFIG_AWS_S3_REGION"
+            fi
+
+            export GITHUB_REPOSITORY="$GITHUB_REPOSITORY"
+            export COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT
+
+            # Restart containers
+            docker compose -f $COMPOSE_FILE down --remove-orphans
+            docker compose -f $COMPOSE_FILE up -d --force-recreate
+
+            echo "Deployment to $BRANCH completed"
+          EOF
