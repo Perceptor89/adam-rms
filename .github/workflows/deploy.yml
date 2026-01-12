@@ -111,7 +111,7 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_REPOSITORY: ${{ steps.repo.outputs.repository_lower }}
+          IMAGE_REPO: ${{ steps.repo.outputs.repository_lower }}
           # Stage secrets
           STAGE_DB_HOSTNAME: ${{ secrets.STAGE_DB_HOSTNAME }}
           STAGE_DB_DATABASE: ${{ secrets.STAGE_DB_DATABASE }}
@@ -153,7 +153,7 @@ jobs:
             echo "$GHCR_TOKEN" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
             # Pull latest image
-            docker pull ghcr.io/$GITHUB_REPOSITORY:$BRANCH
+            docker pull ghcr.io/$IMAGE_REPO:$BRANCH
 
             # Export environment variables based on branch
             if [ "$BRANCH" = "stage" ]; then
@@ -188,7 +188,7 @@ jobs:
               export CONFIG_AWS_S3_REGION="$PROD_CONFIG_AWS_S3_REGION"
             fi
 
-            export GITHUB_REPOSITORY="$GITHUB_REPOSITORY"
+            export GITHUB_REPOSITORY="$IMAGE_REPO"
             export COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT
 
             # Restart containers
