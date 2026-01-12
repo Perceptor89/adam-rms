@@ -63,12 +63,18 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Verify image was pushed
+        run: |
+          echo "Image tags: ${{ steps.meta.outputs.tags }}"
+          echo "Verifying image exists in registry..."
+          docker pull ${{ steps.meta.outputs.tags }}
 
       - name: Move cache
         run: |
@@ -200,5 +206,41 @@ jobs:
             docker compose -f $COMPOSE_FILE down --remove-orphans
             docker compose -f $COMPOSE_FILE up -d --force-recreate
 
+            # Cleanup old images (keep only current branch image)
+            echo "Cleaning up old Docker images..."
+            docker image prune -af --filter "until=24h"
+            
+            # Remove old versions of this specific image (keep only current tag)
+            docker images "ghcr.io/$IMAGE_REPO" --format "{{.Repository}}:{{.Tag}}" | \
+              grep -v ":$BRANCH$" | \
+              xargs -r docker rmi -f 2>/dev/null || true
+
             echo "Deployment to $BRANCH completed"
           EOF
+
+  cleanup:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Set lowercase repository name
+        id: repo
+        run: |
+          echo "repository_lower=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old container images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ steps.repo.outputs.repository_lower }}
+          package-type: 'container'
+          min-versions-to-keep: 1
+          delete-only-untagged-versions: 'false'
