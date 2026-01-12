@@ -239,7 +239,8 @@ jobs:
       - name: Delete old container images
         uses: actions/delete-package-versions@v5
         with:
-          package-name: ${{ steps.repo.outputs.repository_lower }}
+          package-name: 'adam-rms'
           package-type: 'container'
-          min-versions-to-keep: 1
+          min-versions-to-keep: 2
           delete-only-untagged-versions: 'false'
+        continue-on-error: true
