@@ -50,6 +50,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+          flavor: |
+            latest=false
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -76,6 +78,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set lowercase repository name
+        id: repo
+        run: |
+          echo "repository_lower=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up SSH
         if: ${{ env.SSH_PRIVATE_KEY != '' }}
@@ -104,7 +111,7 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY: ${{ steps.repo.outputs.repository_lower }}
           # Stage secrets
           STAGE_DB_HOSTNAME: ${{ secrets.STAGE_DB_HOSTNAME }}
           STAGE_DB_DATABASE: ${{ secrets.STAGE_DB_DATABASE }}
