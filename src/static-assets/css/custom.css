@@ -2,7 +2,7 @@
 
 /* Icon Picker Palette */
 .rms-icon-palette {
-    max-height: 200px;
+    height: 200px;
     overflow-y: auto;
 }
 
