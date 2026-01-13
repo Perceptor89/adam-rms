@@ -75,15 +75,11 @@
                                                             </div>
                                                             <input type="text" class="form-control" name="assetCategoriesGroups_name" value="{{ group.assetCategoriesGroups_name }}">
                                                         </div>
-                                                        <div class="input-group" style="margin-bottom: 5px;">
-                                                            <div class="input-group-prepend">
-                                                                <span class="input-group-text">Icon</span>
-                                                            </div>
-                                                            <select class="form-control rms-icon-picker" name="assetCategoriesGroups_fontAwesome">
-                                                                {% if group.assetCategoriesGroups_fontAwesome %}
-                                                                    <option value="{{ group.assetCategoriesGroups_fontAwesome }}"></option>
-                                                                {% endif %}
-                                                            </select>
+                                                        <div class="form-group" style="margin-bottom: 5px;">
+                                                            <label>Icon</label>
+                                                            <input type="hidden" class="rms-icon-value" name="assetCategoriesGroups_fontAwesome" value="{{ group.assetCategoriesGroups_fontAwesome }}">
+                                                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
+                                                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
                                                         </div>
                                                     </form>
                                                 </div>
@@ -138,15 +134,11 @@
                                                             </div>
                                                             <input type="text" class="form-control" name="assetCategories_name" value="{{ category.assetCategories_name }}">
                                                         </div>
-                                                        <div class="input-group" style="margin-bottom: 5px;">
-                                                            <div class="input-group-prepend">
-                                                                <span class="input-group-text">Icon</span>
-                                                            </div>
-                                                            <select class="form-control rms-icon-picker" name="assetCategories_fontAwesome">
-                                                                {% if category.assetCategories_fontAwesome %}
-                                                                    <option value="{{ category.assetCategories_fontAwesome }}"></option>
-                                                                {% endif %}
-                                                            </select>
+                                                        <div class="form-group" style="margin-bottom: 5px;">
+                                                            <label>Icon</label>
+                                                            <input type="hidden" class="rms-icon-value" name="assetCategories_fontAwesome" value="{{ category.assetCategories_fontAwesome }}">
+                                                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
+                                                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
                                                         </div>
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
@@ -296,9 +288,11 @@
 
             function displayIcons(palette, valueInput, icons) {
                 palette.empty();
+                const currentValue = valueInput.val();
                 icons.forEach(icon => {
                     const iconClass = 'fas fa-' + icon.code;
-                    const iconDiv = $('<div class="icon-item" title="' + icon.label + '" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; cursor: pointer; margin: 3px; border: 2px solid #dee2e6; border-radius: 4px; transition: all 0.2s;"><i class="' + iconClass + '" style="font-size: 18px;"></i></div>');
+                    const isSelected = currentValue === iconClass;
+                    const iconDiv = $('<div class="icon-item' + (isSelected ? ' selected' : '') + '" title="' + icon.label + '" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; cursor: pointer; margin: 3px; border: 2px solid ' + (isSelected ? '#007bff' : '#dee2e6') + '; border-radius: 4px; transition: all 0.2s;' + (isSelected ? ' background-color: #e7f1ff;' : '') + '"><i class="' + iconClass + '" style="font-size: 18px;"></i></div>');
                     iconDiv.hover(
                         function() { $(this).css('border-color', '#007bff'); },
                         function() { if (!$(this).hasClass('selected')) $(this).css('border-color', '#dee2e6'); }
@@ -314,13 +308,23 @@
 
             {% if "ASSETS:ASSET_CATEGORIES:CREATE"|instancePermissions %}
             $("#saveNewCategory").click(function () {
-                var formData = $("#newCategoryForm").serializeArray();
+                var form = $("#newCategoryForm");
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+                var formData = form.serializeArray();
                 ajaxcall("categories/new.php", {formData}, function (data) {
                     location.reload();
                 });
             });
             $("#saveNewCategoryGroup").click(function () {
-                var formData = $("#newCategoryGroupForm").serializeArray();
+                var form = $("#newCategoryGroupForm");
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+                var formData = form.serializeArray();
                 ajaxcall("categories/groups/new.php", {formData}, function (data) {
                     location.reload();
                 });
