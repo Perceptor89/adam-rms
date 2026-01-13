@@ -75,11 +75,15 @@
                                                             </div>
                                                             <input required type="text" class="form-control" name="assetCategoriesGroups_name" value="{{ group.assetCategoriesGroups_name }}">
                                                         </div>
-                                                        <div class="form-group" style="margin-bottom: 5px;">
-                                                            <label>Icon</label>
-                                                            <input type="hidden" class="rms-icon-value" name="assetCategoriesGroups_fontAwesome" value="{{ group.assetCategoriesGroups_fontAwesome }}">
-                                                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
-                                                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
+                                                        <div class="input-group" style="margin-bottom: 5px;">
+                                                            <div class="input-group-prepend">
+                                                                <span class="input-group-text">Icon</span>
+                                                            </div>
+                                                            <div class="form-control" style="height: auto; padding: 5px;">
+                                                                <input type="hidden" class="rms-icon-value" name="assetCategoriesGroups_fontAwesome" value="{{ group.assetCategoriesGroups_fontAwesome }}">
+                                                                <input type="text" class="form-control rms-icon-search mb-2" placeholder="Search icons...">
+                                                                <div class="rms-icon-palette"></div>
+                                                            </div>
                                                         </div>
                                                     </form>
                                                 </div>
@@ -134,11 +138,15 @@
                                                             </div>
                                                             <input required type="text" class="form-control" name="assetCategories_name" value="{{ category.assetCategories_name }}">
                                                         </div>
-                                                        <div class="form-group" style="margin-bottom: 5px;">
-                                                            <label>Icon</label>
-                                                            <input type="hidden" class="rms-icon-value" name="assetCategories_fontAwesome" value="{{ category.assetCategories_fontAwesome }}">
-                                                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
-                                                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
+                                                        <div class="input-group" style="margin-bottom: 5px;">
+                                                            <div class="input-group-prepend">
+                                                                <span class="input-group-text">Icon</span>
+                                                            </div>
+                                                            <div class="form-control" style="height: auto; padding: 5px;">
+                                                                <input type="hidden" class="rms-icon-value" name="assetCategories_fontAwesome" value="{{ category.assetCategories_fontAwesome }}">
+                                                                <input type="text" class="form-control rms-icon-search mb-2" placeholder="Search icons...">
+                                                                <div class="rms-icon-palette"></div>
+                                                            </div>
                                                         </div>
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
@@ -186,11 +194,15 @@
                             </div>
                             <input required type="text" class="form-control" name="assetCategories_name">
                         </div>
-                        <div class="form-group" style="margin-bottom: 5px;">
-                            <label>Icon</label>
-                            <input type="hidden" class="rms-icon-value" name="assetCategories_fontAwesome">
-                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
-                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
+                        <div class="input-group" style="margin-bottom: 5px;">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">Icon</span>
+                            </div>
+                            <div class="form-control" style="height: auto; padding: 5px;">
+                                <input type="hidden" class="rms-icon-value" name="assetCategories_fontAwesome">
+                                <input type="text" class="form-control rms-icon-search mb-2" placeholder="Search icons...">
+                                <div class="rms-icon-palette"></div>
+                            </div>
                         </div>
                         <div class="input-group">
                             <div class="input-group-prepend">
@@ -228,11 +240,15 @@
                             </div>
                             <input required type="text" class="form-control" name="assetCategoriesGroups_name">
                         </div>
-                        <div class="form-group" style="margin-bottom: 5px;">
-                            <label>Icon</label>
-                            <input type="hidden" class="rms-icon-value" name="assetCategoriesGroups_fontAwesome">
-                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
-                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
+                        <div class="input-group" style="margin-bottom: 5px;">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">Icon</span>
+                            </div>
+                            <div class="form-control" style="height: auto; padding: 5px;">
+                                <input type="hidden" class="rms-icon-value" name="assetCategoriesGroups_fontAwesome">
+                                <input type="text" class="form-control rms-icon-search mb-2" placeholder="Search icons...">
+                                <div class="rms-icon-palette"></div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -292,14 +308,10 @@
                 icons.forEach(icon => {
                     const iconClass = 'fas fa-' + icon.code;
                     const isSelected = currentValue === iconClass;
-                    const iconDiv = $('<div class="icon-item' + (isSelected ? ' selected' : '') + '" title="' + icon.label + '" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; cursor: pointer; margin: 3px; border: 2px solid ' + (isSelected ? '#007bff' : '#dee2e6') + '; border-radius: 4px; transition: all 0.2s;' + (isSelected ? ' background-color: #e7f1ff;' : '') + '"><i class="' + iconClass + '" style="font-size: 18px;"></i></div>');
-                    iconDiv.hover(
-                        function() { $(this).css('border-color', '#007bff'); },
-                        function() { if (!$(this).hasClass('selected')) $(this).css('border-color', '#dee2e6'); }
-                    );
+                    const iconDiv = $('<div class="icon-item' + (isSelected ? ' selected' : '') + '" title="' + icon.label + '"><i class="' + iconClass + '"></i></div>');
                     iconDiv.click(function() {
-                        palette.find('.icon-item').removeClass('selected').css({'border-color': '#dee2e6', 'background-color': ''});
-                        $(this).addClass('selected').css({'border-color': '#007bff', 'background-color': '#e7f1ff'});
+                        palette.find('.icon-item').removeClass('selected');
+                        $(this).addClass('selected');
                         valueInput.val(iconClass);
                     });
                     palette.append(iconDiv);
