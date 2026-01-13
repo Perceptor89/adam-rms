@@ -73,7 +73,7 @@
                                                             <div class="input-group-prepend">
                                                                 <span class="input-group-text">Name</span>
                                                             </div>
-                                                            <input type="text" class="form-control" name="assetCategoriesGroups_name" value="{{ group.assetCategoriesGroups_name }}">
+                                                            <input required type="text" class="form-control" name="assetCategoriesGroups_name" value="{{ group.assetCategoriesGroups_name }}">
                                                         </div>
                                                         <div class="form-group" style="margin-bottom: 5px;">
                                                             <label>Icon</label>
@@ -132,7 +132,7 @@
                                                             <div class="input-group-prepend">
                                                                 <span class="input-group-text">Name</span>
                                                             </div>
-                                                            <input type="text" class="form-control" name="assetCategories_name" value="{{ category.assetCategories_name }}">
+                                                            <input required type="text" class="form-control" name="assetCategories_name" value="{{ category.assetCategories_name }}">
                                                         </div>
                                                         <div class="form-group" style="margin-bottom: 5px;">
                                                             <label>Icon</label>
@@ -332,13 +332,23 @@
             {% endif %}
             {% if "ASSETS:ASSET_CATEGORIES:EDIT"|instancePermissions %}
             $(".saveEdit-button").click(function () {
-                var formData = $(".edit-form[data-id=" + $(this).data("id") + "]").serializeArray();
+                var form = $(".edit-form[data-id=" + $(this).data("id") + "]");
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+                var formData = form.serializeArray();
                 ajaxcall("categories/edit.php", {formData}, function (data) {
                     location.reload();
                 });
             });
             $(".saveEditGroup-button").click(function () {
-                var formData = $(".editGroup-form[data-id=" + $(this).data("id") + "]").serializeArray();
+                var form = $(".editGroup-form[data-id=" + $(this).data("id") + "]");
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+                var formData = form.serializeArray();
                 ajaxcall("categories/groups/edit.php", {formData}, function (data) {
                     location.reload();
                 });
