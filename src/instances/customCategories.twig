@@ -194,11 +194,11 @@
                             </div>
                             <input required type="text" class="form-control" name="assetCategories_name">
                         </div>
-                        <div class="input-group" style="margin-bottom: 5px;">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text">Icon</span>
-                            </div>
-                            <select class="form-control rms-icon-picker" name="assetCategories_fontAwesome"></select>
+                        <div class="form-group" style="margin-bottom: 5px;">
+                            <label>Icon</label>
+                            <input type="hidden" class="rms-icon-value" name="assetCategories_fontAwesome">
+                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
+                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
                         </div>
                         <div class="input-group">
                             <div class="input-group-prepend">
@@ -236,11 +236,11 @@
                             </div>
                             <input required type="text" class="form-control" name="assetCategoriesGroups_name">
                         </div>
-                        <div class="input-group" style="margin-bottom: 5px;">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text">Icon</span>
-                            </div>
-                            <select class="form-control rms-icon-picker" name="assetCategoriesGroups_fontAwesome"></select>
+                        <div class="form-group" style="margin-bottom: 5px;">
+                            <label>Icon</label>
+                            <input type="hidden" class="rms-icon-value" name="assetCategoriesGroups_fontAwesome">
+                            <input type="text" class="form-control rms-icon-search" placeholder="Search icons..." style="margin-bottom: 5px;">
+                            <div class="rms-icon-palette" style="height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 4px; padding: 5px;"></div>
                         </div>
                     </form>
                 </div>
@@ -254,46 +254,64 @@
     {% endif %}
     <script>
         $(document).ready(function () {
+            let allIcons = [];
+
+            // Load all icons once
+            $.ajax({
+                url: "{{ CONFIG.ROOTURL }}/api/icons/getIcons.php",
+                type: "POST",
+                data: { all: '1' },
+                success: function (data) {
+                    if (data.result && data.response) {
+                        allIcons = data.response;
+                    }
+                }
+            });
+
+            // When modal opens, populate the palette
             $('.modal').on('shown.bs.modal', function () {
-                $(this).find('.rms-icon-picker').first().select2({
-                    tags: false,
-                    multiple: false,
-                    theme: "bootstrap4",
-                    minimumInputLength: 1,
-                    minimumResultsForSearch: 1,
-                    placeholder: "Search for an Icon",
-                    ajax: {
-                        url: "{{ CONFIG.ROOTURL }}/api/icons/getIcons.php",
-                        dataType: "json",
-                        type: "POST",
-                        data: function (params) {
-                            var queryParameters = {
-                                search: params.term,
-                            }
-                            return queryParameters;
-                        },
-                        processResults: function (data) {
-                            if (data && data.result && data.response) {
-                                return {
-                                    results: $.map(data.response, function (item) {
-                                        return {
-                                            text: item.label,
-                                            id: "fas fa-" + item.code
-                                        }
-                                    })
-                                };
-                            } else return {
-                                results: []
-                            };
+                const modal = $(this);
+                const palette = modal.find('.rms-icon-palette');
+                const searchInput = modal.find('.rms-icon-search');
+                const valueInput = modal.find('.rms-icon-value');
+                
+                if (palette.length > 0) {
+                    displayIcons(palette, valueInput, allIcons);
+                    
+                    searchInput.off('input').on('input', function() {
+                        const searchTerm = $(this).val().toLowerCase();
+                        if (searchTerm === '') {
+                            displayIcons(palette, valueInput, allIcons);
+                        } else {
+                            const filtered = allIcons.filter(icon => 
+                                icon.label.toLowerCase().includes(searchTerm) || 
+                                icon.code.toLowerCase().includes(searchTerm) ||
+                                icon.keywords.some(k => k.toLowerCase().includes(searchTerm))
+                            );
+                            displayIcons(palette, valueInput, filtered);
                         }
-                    },
-                    templateResult: input => $('<span><i class="' + input.id + '"></i>&nbsp;' + input.text + '</span>'),
-                    templateSelection: input => $('<span><i class="' + input.id + '"></i></span>')
+                    });
+                }
+            });
+
+            function displayIcons(palette, valueInput, icons) {
+                palette.empty();
+                icons.forEach(icon => {
+                    const iconClass = 'fas fa-' + icon.code;
+                    const iconDiv = $('<div class="icon-item" title="' + icon.label + '" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; cursor: pointer; margin: 3px; border: 2px solid #dee2e6; border-radius: 4px; transition: all 0.2s;"><i class="' + iconClass + '" style="font-size: 18px;"></i></div>');
+                    iconDiv.hover(
+                        function() { $(this).css('border-color', '#007bff'); },
+                        function() { if (!$(this).hasClass('selected')) $(this).css('border-color', '#dee2e6'); }
+                    );
+                    iconDiv.click(function() {
+                        palette.find('.icon-item').removeClass('selected').css({'border-color': '#dee2e6', 'background-color': ''});
+                        $(this).addClass('selected').css({'border-color': '#007bff', 'background-color': '#e7f1ff'});
+                        valueInput.val(iconClass);
+                    });
+                    palette.append(iconDiv);
                 });
-            });
-            $('.modal').on('hidden.bs.modal', function () {
-                $(this).find('.rms-icon-picker').first().select2('destroy');
-            });
+            }
+
             {% if "ASSETS:ASSET_CATEGORIES:CREATE"|instancePermissions %}
             $("#saveNewCategory").click(function () {
                 var formData = $("#newCategoryForm").serializeArray();
