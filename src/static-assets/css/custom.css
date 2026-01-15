@@ -1,0 +1,33 @@
+/* Custom styles for AdamRMS */
+
+/* Icon Picker Palette */
+.rms-icon-palette {
+    height: 200px;
+    overflow-y: auto;
+}
+
+.rms-icon-palette .icon-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    margin: 3px;
+    border: 2px solid #dee2e6;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.rms-icon-palette .icon-item:hover {
+    border-color: #007bff;
+}
+
+.rms-icon-palette .icon-item.selected {
+    border-color: #007bff;
+    background-color: #e7f1ff;
+}
+
+.rms-icon-palette .icon-item i {
+    font-size: 18px;
+}
