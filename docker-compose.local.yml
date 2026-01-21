@@ -1,0 +1,64 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: adam-rms-local
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html/src
+    environment:
+      - DB_HOSTNAME=mysql
+      - DB_DATABASE=adam_rms
+      - DB_USERNAME=adam_user
+      - DB_PASSWORD=adam_password
+      - DB_PORT=3306
+      - DEV_MODE=true
+      - CONFIG_ROOTURL=http://localhost:8080
+      - CONFIG_AWS_S3_KEY=minio_access_key
+      - CONFIG_AWS_S3_SECRET=minio_secret_key
+      - CONFIG_AWS_S3_BUCKET=adam-rms-bucket
+      - CONFIG_AWS_S3_BROWSER_ENDPOINT=http://localhost:9000
+      - CONFIG_AWS_S3_SERVER_ENDPOINT=http://minio:9000
+      - CONFIG_AWS_S3_ENDPOINT_PATHSTYLE=Enabled
+      - CONFIG_AWS_S3_REGION=us-east-1
+    depends_on:
+      - mysql
+      - minio
+
+  mysql:
+    image: percona:8.0
+    container_name: adam-rms-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=adam_rms
+      - MYSQL_USER=adam_user
+      - MYSQL_PASSWORD=adam_password
+      - MYSQL_ROOT_PASSWORD=root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  minio:
+    image: minio/minio
+    container_name: adam-rms-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minio_access_key
+      - MINIO_ROOT_PASSWORD=minio_secret_key
+      - MINIO_SERVER_URL=http://minio:9000
+      - MINIO_BROWSER_REDIRECT_URL=http://localhost:9001
+      - MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:8080
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  mysql_data:
+  minio_data:

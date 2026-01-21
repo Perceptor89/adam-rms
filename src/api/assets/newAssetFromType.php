@@ -16,17 +16,21 @@ $DBLIB->where("assetTypes_id", $array['assetTypes_id']);
 $asset = $DBLIB->getone("assetTypes");
 if (!$asset) finish(false, ["code" => "LIST-ASSETTYPES-FAIL", "message" => "Could not find asset type"]);
 
-if (isset($array['assets_tag']) and $array['assets_tag'] != null) {
+$quantity = isset($array['quantity']) ? max(1, intval($array['quantity'])) : 1;
+
+$userProvidedTag = isset($array['assets_tag']) && $array['assets_tag'] != null && $array['assets_tag'] !== '';
+
+if ($userProvidedTag && $quantity > 1) {
+    finish(false, ["code" => "INSERT-FAIL", "message" => "Cannot use custom tag when creating multiple assets"]);
+}
+
+if ($userProvidedTag) {
     $DBLIB->where("assets.instances_id", $AUTH->data['instance']['instances_id']);
     $DBLIB->where("assets.assets_tag", $array['assets_tag']);
     $DBLIB->where("assets.assets_deleted", 0); //Deleted assets can't be restored, so can be used
     $duplicateAssetTag = $DBLIB->getValue("assets", "count(*)");
     if ($duplicateAssetTag > 0) finish(false, ["code" => "INSERT-FAIL", "message" => "Sorry that tag you chose was a duplicate - please choose another one"]);
-} else $array['assets_tag'] = generateNewTag();
-
-$result = $DBLIB->insert("assets", array_intersect_key($array, array_flip(['assets_tag', 'assetTypes_id', 'assets_notes', 'instances_id', 'asset_definableFields_1', 'asset_definableFields_2', 'asset_definableFields_3', 'asset_definableFields_4', 'asset_definableFields_5', 'asset_definableFields_6', 'asset_definableFields_7', 'asset_definableFields_8', 'asset_definableFields_9', 'asset_definableFields_10', 'assets_assetGroups'])));
-
-if (!$result) finish(false, ["code" => "INSERT-FAIL", "message" => "Could not insert asset"]);
+}
 
 function checkDuplicate($value, $type)
 {
@@ -38,22 +42,49 @@ function checkDuplicate($value, $type)
     else return false;
 }
 
-//Generate asset barcode
+$createdAssets = [];
 
-$assetBarcodeData = [
-    "assetsBarcodes_value" => $array['assets_tag'],
-    "assetsBarcodes_type" => "QR_CODE",
-    "assets_id" => $result,
-    "users_userid" => $AUTH->data['users_userid'],
-    "assetsBarcodes_added" => date("Y-m-d H:i:s")
-];
-while (checkDuplicate($assetBarcodeData["assetsBarcodes_value"], $assetBarcodeData["assetsBarcodes_type"])) {
-    $assetBarcodeData["assetsBarcodes_value"] = mt_rand(1000, 999999); //Duplicate, so generate a hopefully random number as a replacement
+for ($i = 0; $i < $quantity; $i++) {
+    $assetData = $array;
+    
+    // Only use user-provided tag for the first asset
+    if (!$userProvidedTag || $i > 0) {
+        $assetData['assets_tag'] = generateNewTag();
+    }
+    
+    $result = $DBLIB->insert("assets", array_intersect_key($assetData, array_flip(['assets_tag', 'assetTypes_id', 'assets_notes', 'instances_id', 'asset_definableFields_1', 'asset_definableFields_2', 'asset_definableFields_3', 'asset_definableFields_4', 'asset_definableFields_5', 'asset_definableFields_6', 'asset_definableFields_7', 'asset_definableFields_8', 'asset_definableFields_9', 'asset_definableFields_10', 'assets_assetGroups'])));
+
+    if (!$result) finish(false, ["code" => "INSERT-FAIL", "message" => "Could not insert asset"]);
+
+    //Generate asset barcode
+    $assetBarcodeData = [
+        "assetsBarcodes_value" => $assetData['assets_tag'],
+        "assetsBarcodes_type" => "QR_CODE",
+        "assets_id" => $result,
+        "users_userid" => $AUTH->data['users_userid'],
+        "assetsBarcodes_added" => date("Y-m-d H:i:s")
+    ];
+    while (checkDuplicate($assetBarcodeData["assetsBarcodes_value"], $assetBarcodeData["assetsBarcodes_type"])) {
+        $assetBarcodeData["assetsBarcodes_value"] = mt_rand(1000, 999999); //Duplicate, so generate a hopefully random number as a replacement
+    }
+    $insert = $DBLIB->insert("assetsBarcodes", $assetBarcodeData);
+    //We don't really mind if the insert fails, we can always generate another one later...
+
+    $createdAssets[] = [
+        "assets_id" => $result,
+        "assets_tag" => $assetData['assets_tag']
+    ];
 }
-$insert = $DBLIB->insert("assetsBarcodes", $assetBarcodeData);
-//We don't really mind if the insert fails, we can always generate another one later...
 
-finish(true, null, ["assets_id" => $result, "assets_tag" => $array['assets_tag'], "assetTypes_id" => $array['assetTypes_id']]);
+$response = [
+    "assets_id" => $createdAssets[0]['assets_id'],
+    "assets_tag" => $createdAssets[0]['assets_tag'],
+    "assetTypes_id" => $array['assetTypes_id'],
+    "quantity" => $quantity,
+    "created_assets" => $createdAssets
+];
+
+finish(true, null, $response);
 
 /** @OA\Post(
  *     path="/assets/newAssetFromType.php", 
